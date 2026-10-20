@@ -1,4 +1,4 @@
-continue the app following these new specifications. Try to change the minimum possible, the current state is awesome
+Continue the app following these new specifications. Try to change the minimum possible, the current state is awesome
 
 Build a comprehensive React travel planning web app using Tailwind CSS, shadcn/ui, and lucide-react. The app simulates a multi-page routing system and complex state management. Please render all UI text, placeholders, and mock data in Brazilian Portuguese.
 

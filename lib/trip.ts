@@ -12,8 +12,25 @@ export type Stop = {
   category: Category
   durationMin: number
   constraint: Constraint
+  hours?: string
   x: number
   y: number
+}
+
+export type Day = {
+  /** Carrinho diário: itens atribuídos ao dia, ainda sem horário. */
+  unallocated: Stop[]
+  /** Itens alocados na linha do tempo do dia. */
+  stops: Stop[]
+  /** Ordem (ids) dos itens alocados. */
+  order: string[]
+}
+
+export type Trip = {
+  destination: string
+  /** Carrinho global: itens sem dia preferido. */
+  globalUnallocated: Stop[]
+  days: Day[]
 }
 
 export type ShiftId = 'manha' | 'tarde' | 'noite' | 'madrugada'
@@ -23,13 +40,15 @@ export type Shift = {
   label: string
   range: string
   color: string
+  /** Cor do texto sobre a cor do turno (pins e números). */
+  onColor: string
 }
 
 export const SHIFTS: Record<ShiftId, Shift> = {
-  manha: { id: 'manha', label: 'Manhã', range: '06:00 – 12:00', color: '#F5B301' },
-  tarde: { id: 'tarde', label: 'Tarde', range: '12:00 – 18:00', color: '#F2711C' },
-  noite: { id: 'noite', label: 'Noite', range: '18:00 – 00:00', color: '#1E3A8A' },
-  madrugada: { id: 'madrugada', label: 'Madrugada', range: '00:00 – 06:00', color: '#7C3AED' },
+  manha: { id: 'manha', label: 'Manhã', range: '06:00 – 12:00', color: '#F5B301', onColor: '#3D2C00' },
+  tarde: { id: 'tarde', label: 'Tarde', range: '12:00 – 18:00', color: '#F2711C', onColor: '#FFFFFF' },
+  noite: { id: 'noite', label: 'Noite', range: '18:00 – 00:00', color: '#38BDF8', onColor: '#06304A' },
+  madrugada: { id: 'madrugada', label: 'Madrugada', range: '00:00 – 06:00', color: '#7C3AED', onColor: '#FFFFFF' },
 }
 
 export const SHIFT_ORDER: ShiftId[] = ['manha', 'tarde', 'noite', 'madrugada']
@@ -44,26 +63,27 @@ export const HOTEL = { name: 'Hospedagem · Copacabana', x: 655, y: 470 }
 
 export const CITY_NAME = 'Rio de Janeiro'
 
-type CatalogEntry = Omit<Stop, 'id' | 'durationMin' | 'constraint'> & {
+type CatalogEntry = Omit<Stop, 'id' | 'durationMin' | 'constraint' | 'hours'> & {
+  hours: string
   defaultDuration: number
 }
 
 export const CATALOG: CatalogEntry[] = [
-  { name: 'Café da manhã na Confeitaria Colombo', area: 'Centro', category: 'refeicao', x: 560, y: 150, defaultDuration: 60 },
-  { name: 'Museu do Amanhã', area: 'Praça Mauá', category: 'museu', x: 610, y: 95, defaultDuration: 120 },
-  { name: 'Museu de Arte do Rio (MAR)', area: 'Praça Mauá', category: 'museu', x: 575, y: 105, defaultDuration: 90 },
-  { name: 'Escadaria Selarón', area: 'Lapa', category: 'atracao', x: 535, y: 205, defaultDuration: 45 },
-  { name: 'Almoço no Aprazível', area: 'Santa Teresa', category: 'refeicao', x: 480, y: 215, defaultDuration: 90 },
-  { name: 'Cristo Redentor', area: 'Corcovado', category: 'atracao', x: 410, y: 305, defaultDuration: 120 },
-  { name: 'Bondinho do Pão de Açúcar', area: 'Urca', category: 'atracao', x: 780, y: 330, defaultDuration: 90 },
-  { name: 'Jardim Botânico', area: 'Jardim Botânico', category: 'atracao', x: 315, y: 425, defaultDuration: 90 },
-  { name: 'Parque Lage', area: 'Jardim Botânico', category: 'atracao', x: 355, y: 395, defaultDuration: 60 },
-  { name: 'Instituto Moreira Salles', area: 'Gávea', category: 'museu', x: 275, y: 470, defaultDuration: 75 },
-  { name: 'Pôr do sol no Arpoador', area: 'Arpoador', category: 'atracao', x: 580, y: 565, defaultDuration: 60 },
-  { name: 'Praia de Ipanema', area: 'Ipanema', category: 'atracao', x: 480, y: 575, defaultDuration: 120 },
-  { name: 'Jantar no Leblon', area: 'Leblon', category: 'refeicao', x: 360, y: 580, defaultDuration: 90 },
-  { name: 'Samba na Pedra do Sal', area: 'Saúde', category: 'atracao', x: 590, y: 130, defaultDuration: 90 },
-  { name: 'Circo Voador', area: 'Lapa', category: 'atracao', x: 545, y: 235, defaultDuration: 120 },
+  { name: 'Café da manhã na Confeitaria Colombo', hours: 'Seg–Sáb · 09h–17h', area: 'Centro', category: 'refeicao', x: 560, y: 150, defaultDuration: 60 },
+  { name: 'Museu do Amanhã', hours: 'Ter–Dom · 10h–18h', area: 'Praça Mauá', category: 'museu', x: 610, y: 95, defaultDuration: 120 },
+  { name: 'Museu de Arte do Rio (MAR)', hours: 'Ter–Dom · 10h–17h', area: 'Praça Mauá', category: 'museu', x: 575, y: 105, defaultDuration: 90 },
+  { name: 'Escadaria Selarón', hours: 'Todos os dias · 24h', area: 'Lapa', category: 'atracao', x: 535, y: 205, defaultDuration: 45 },
+  { name: 'Almoço no Aprazível', hours: 'Ter–Dom · 12h–22h', area: 'Santa Teresa', category: 'refeicao', x: 480, y: 215, defaultDuration: 90 },
+  { name: 'Cristo Redentor', hours: 'Todos os dias · 08h–19h', area: 'Corcovado', category: 'atracao', x: 410, y: 305, defaultDuration: 120 },
+  { name: 'Bondinho do Pão de Açúcar', hours: 'Todos os dias · 08h–20h', area: 'Urca', category: 'atracao', x: 780, y: 330, defaultDuration: 90 },
+  { name: 'Jardim Botânico', hours: 'Ter–Dom · 08h–17h', area: 'Jardim Botânico', category: 'atracao', x: 315, y: 425, defaultDuration: 90 },
+  { name: 'Parque Lage', hours: 'Todos os dias · 08h–17h', area: 'Jardim Botânico', category: 'atracao', x: 355, y: 395, defaultDuration: 60 },
+  { name: 'Instituto Moreira Salles', hours: 'Ter–Dom · 11h–20h', area: 'Gávea', category: 'museu', x: 275, y: 470, defaultDuration: 75 },
+  { name: 'Pôr do sol no Arpoador', hours: 'Todos os dias · 24h', area: 'Arpoador', category: 'atracao', x: 580, y: 565, defaultDuration: 60 },
+  { name: 'Praia de Ipanema', hours: 'Todos os dias · 24h', area: 'Ipanema', category: 'atracao', x: 480, y: 575, defaultDuration: 120 },
+  { name: 'Jantar no Leblon', hours: 'Todos os dias · 19h–00h', area: 'Leblon', category: 'refeicao', x: 360, y: 580, defaultDuration: 90 },
+  { name: 'Samba na Pedra do Sal', hours: 'Seg e Sex · 19h–01h', area: 'Saúde', category: 'atracao', x: 590, y: 130, defaultDuration: 90 },
+  { name: 'Circo Voador', hours: 'Qui–Sáb · 20h–03h', area: 'Lapa', category: 'atracao', x: 545, y: 235, defaultDuration: 120 },
 ]
 
 let idCounter = 0
@@ -126,4 +146,17 @@ export function describeConstraint(c: Constraint) {
   if (c.type === 'inicio') return `Início obrigatório às ${c.start}`
   if (c.type === 'janela') return `Visitar entre ${c.from} e ${c.to}`
   return null
+}
+
+export function createTrip(destination: string, dayCount: number): Trip {
+  return {
+    destination,
+    globalUnallocated: [],
+    days: Array.from({ length: dayCount }, () => ({ unallocated: [], stops: [], order: [] })),
+  }
+}
+
+export function cartCount(trip: Trip | null) {
+  if (!trip) return 0
+  return trip.globalUnallocated.length + trip.days.reduce((sum, d) => sum + d.unallocated.length, 0)
 }

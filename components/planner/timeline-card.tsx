@@ -70,9 +70,8 @@ export function TimelineCard({ item, number, shift, dark, highlighted, onHover }
         <span
           className={cn(
             'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums',
-            shift === 'manha' ? 'text-[#3D2C00]' : 'text-white',
           )}
-          style={{ backgroundColor: color }}
+          style={{ backgroundColor: color, color: SHIFTS[shift].onColor }}
           aria-label={`Parada ${number}`}
         >
           {number}

@@ -26,7 +26,7 @@
   --color-background: var(--background);
   --color-shift-manha: #f5b301;
   --color-shift-tarde: #f2711c;
-  --color-shift-noite: #1e3a8a;
+  --color-shift-noite: #38bdf8;
   --color-shift-madrugada: #7c3aed;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
