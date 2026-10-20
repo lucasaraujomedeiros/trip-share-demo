@@ -5,7 +5,7 @@ import { MapPin, ZoomIn, ZoomOut } from 'lucide-react'
 import { MapBase } from './map-base'
 import { CITY_NAME, HOTEL, SHIFTS, SHIFT_ORDER, shiftFor, type ShiftId, type Stop } from '@/lib/trip'
 import type { Itinerary } from '@/lib/scheduler'
-import { centroid, curvedSegment, organicBlobPath, type Pt } from '@/lib/map-geometry'
+import { curvedSegment, type Pt } from '@/lib/map-geometry'
 import { cn } from '@/lib/utils'
 
 export type MapZoom = 'in' | 'out'
@@ -17,6 +17,7 @@ const EASE = '600ms cubic-bezier(0.22, 1, 0.36, 1)'
 type MapPoint = Pt & { id: string; name: string; number?: number; shift?: ShiftId }
 
 type Props = {
+  destination?: string
   stops: Stop[]
   itinerary: Itinerary | null
   zoom: MapZoom
@@ -41,7 +42,7 @@ function computeView(points: Pt[], zoomedIn: boolean) {
   return { s, tx: W / 2 - ((minX + maxX) / 2) * s, ty: H / 2 - ((minY + maxY) / 2) * s }
 }
 
-export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHover }: Props) {
+export function MapPanel({ destination = CITY_NAME, stops, itinerary, zoom, onZoomChange, hoveredId, onHover }: Props) {
   const zoomedIn = zoom === 'in'
 
   const points = useMemo<MapPoint[]>(() => {
@@ -71,11 +72,6 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
     })
   }, [itinerary, points])
 
-  const shiftGroups = useMemo(() => {
-    if (!itinerary) return []
-    return SHIFT_ORDER.map((id) => ({ id, pts: points.filter((p) => p.shift === id) })).filter((g) => g.pts.length)
-  }, [itinerary, points])
-
   const hotel = project(HOTEL)
 
   return (
@@ -88,14 +84,11 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
         role="img"
         aria-label={
           itinerary
-            ? `Mapa ilustrativo de ${CITY_NAME} com ${points.length} paradas numeradas e coloridas por turno`
-            : `Mapa ilustrativo de ${CITY_NAME} com ${points.length} paradas selecionadas`
+            ? `Mapa ilustrativo de ${destination} com ${points.length} paradas numeradas e coloridas por turno`
+            : `Mapa ilustrativo de ${destination} com ${points.length} paradas selecionadas`
         }
       >
         <defs>
-          <filter id="neblina" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="26" />
-          </filter>
           <filter id="sombra-pin" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000" floodOpacity="0.28" />
           </filter>
@@ -104,16 +97,8 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
         <g style={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})`, transition: `transform ${EASE}` }}>
           <MapBase zoomedIn={zoomedIn} />
 
-          <g style={{ opacity: zoomedIn ? 0 : 1, transition: 'opacity 500ms' }} aria-hidden="true">
-            {shiftGroups.map((g) => (
-              <g key={g.id} filter="url(#neblina)">
-                <path d={organicBlobPath(g.pts, 75)} fill={SHIFTS[g.id].color} fillOpacity={0.55} />
-                <path d={organicBlobPath(g.pts, 45)} fill={SHIFTS[g.id].color} fillOpacity={0.35} />
-              </g>
-            ))}
-          </g>
-
-          <g style={{ opacity: zoomedIn ? 1 : 0, transition: 'opacity 400ms' }} aria-hidden="true">
+          {zoomedIn && (
+          <g aria-hidden="true">
             {segments.map((seg) => (
               <path
                 key={`${seg.key}-casing`}
@@ -149,27 +134,7 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
               />
             ))}
           </g>
-        </g>
-
-        <g aria-hidden="true" style={{ opacity: zoomedIn ? 0 : 1, transition: 'opacity 500ms' }}>
-          {placeLabels(
-            shiftGroups.map((g) => {
-              const label = `${SHIFTS[g.id].label} · ${g.pts.length}`
-              const c = project(centroid(g.pts))
-              return { id: g.id, label, width: label.length * 7.4 + 26, x: c.x, y: c.y - 34 }
-            }),
-          ).map(({ id, label, width, x, y }) => {
-            const g = { id }
-            return (
-              <g key={g.id} style={{ transform: `translate(${x}px, ${y}px)`, transition: `transform ${EASE}` }}>
-                <rect x={-width / 2} y={-13} width={width} height={26} rx={13} fill="#FFFFFF" filter="url(#sombra-pin)" />
-                <circle cx={-width / 2 + 13} cy={0} r={4.5} fill={SHIFTS[g.id].color} />
-                <text x={7} y={4.5} textAnchor="middle" fontSize="12.5" fontWeight="600" fill="#222222">
-                  {label}
-                </text>
-              </g>
-            )
-          })}
+          )}
         </g>
 
         <g style={{ transform: `translate(${hotel.x}px, ${hotel.y}px)`, transition: `transform ${EASE}` }}>
@@ -182,7 +147,7 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
           const pos = project(p)
           const color = p.shift ? SHIFTS[p.shift].color : '#222222'
           const highlighted = hoveredId === p.id
-          const scale = (zoomedIn ? 1 : 0.5) * (highlighted ? 1.25 : 1)
+          const scale = (zoomedIn ? 1 : 0.72) * (highlighted ? 1.25 : 1)
           return (
             <g
               key={p.id}
@@ -201,8 +166,7 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
                     textAnchor="middle"
                     fontSize="14"
                     fontWeight="700"
-                    fill={p.shift === 'manha' ? '#3D2C00' : '#FFFFFF'}
-                    style={{ opacity: zoomedIn ? 1 : 0, transition: 'opacity 300ms' }}
+                    fill={p.shift ? SHIFTS[p.shift].onColor : '#FFFFFF'}
                   >
                     {p.number}
                   </text>
@@ -216,13 +180,13 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
       </svg>
 
       <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-3">
-        <div className="pointer-events-auto rounded-2xl bg-background/95 px-3.5 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur">
+        <div className="pointer-events-auto rounded-2xl bg-background/95 px-3.5 py-2 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
           <p className="flex items-center gap-1.5 text-sm font-semibold">
             <MapPin className="size-4 text-primary" aria-hidden="true" />
-            {CITY_NAME}
+            {destination}
           </p>
           <p className="hidden text-xs text-muted-foreground sm:block">
-            {zoomedIn ? 'Visão de ruas · sequência e rotas' : 'Visão da cidade · distribuição por turno'}
+            {zoomedIn ? 'Visão de ruas · sequência e rotas' : 'Visão da cidade · distribuição das paradas'}
           </p>
         </div>
 
@@ -239,7 +203,7 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
 
       <div className="pointer-events-none absolute inset-x-3 bottom-3 flex justify-start">
         {itinerary ? (
-          <ul className="pointer-events-auto flex flex-wrap gap-x-3 gap-y-1.5 rounded-2xl bg-background/95 px-3.5 py-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.12)] backdrop-blur">
+          <ul className="pointer-events-auto flex flex-wrap gap-x-3 gap-y-1.5 rounded-2xl bg-background/95 px-3.5 py-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
             {SHIFT_ORDER.map((id) => (
               <li key={id} className="flex items-center gap-1.5 text-xs font-medium">
                 <span className="size-2.5 rounded-full" style={{ backgroundColor: SHIFTS[id].color }} aria-hidden="true" />
@@ -255,24 +219,6 @@ export function MapPanel({ stops, itinerary, zoom, onZoomChange, hoveredId, onHo
       </div>
     </div>
   )
-}
-
-type Label = { id: ShiftId; label: string; width: number; x: number; y: number }
-
-function placeLabels(labels: Label[]) {
-  const placed: Label[] = []
-  for (const label of [...labels].sort((a, b) => b.y - a.y)) {
-    const next = { ...label }
-    let guard = 0
-    while (
-      guard++ < 10 &&
-      placed.some((p) => Math.abs(p.x - next.x) < (p.width + next.width) / 2 + 6 && Math.abs(p.y - next.y) < 32)
-    ) {
-      next.y -= 32
-    }
-    placed.push(next)
-  }
-  return placed
 }
 
 function ZoomButton({

@@ -27,7 +27,7 @@ export const SHIFT_STYLES: Record<
 > = {
   manha: { container: 'bg-[#FFF5D1]', title: 'text-[#6B4D00]', subtle: 'text-[#8A6A12]', dark: false, icon: Sunrise },
   tarde: { container: 'bg-[#FFE7D6]', title: 'text-[#8A3407]', subtle: 'text-[#A4551F]', dark: false, icon: Sun },
-  noite: { container: 'bg-[#13235E]', title: 'text-white', subtle: 'text-white/70', dark: true, icon: Sunset },
+  noite: { container: 'bg-[#E0F2FE]', title: 'text-[#075985]', subtle: 'text-[#0369A1]', dark: false, icon: Sunset },
   madrugada: { container: 'bg-[#2D1563]', title: 'text-white', subtle: 'text-white/70', dark: true, icon: Moon },
 }
 
@@ -49,9 +49,10 @@ type Props = {
   onReorder: (ids: string[]) => void
   hoveredId: string | null
   onHover: (id: string | null) => void
+  readOnly?: boolean
 }
 
-export function Timeline({ itinerary, onReorder, hoveredId, onHover }: Props) {
+export function Timeline({ itinerary, onReorder, hoveredId, onHover, readOnly }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -130,6 +131,7 @@ export function Timeline({ itinerary, onReorder, hoveredId, onHover }: Props) {
                       dark={style.dark}
                       highlighted={hoveredId === item.stop.id}
                       onHover={onHover}
+                      readOnly={readOnly}
                     />
                   ))}
                 </ol>

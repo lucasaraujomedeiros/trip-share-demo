@@ -1,4 +1,4 @@
-import { HOTEL, type Stop, toMinutes } from './trip'
+import { HOTEL, type Day, type Stop, toMinutes } from './trip'
 
 export type ScheduledStop = {
   stop: Stop
@@ -119,4 +119,66 @@ export function optimizeOrder(stops: Stop[], departureTime: string): Stop[] {
   }
 
   return ordered
+}
+
+/**
+ * Divide as paradas em `dayCount` grupos geograficamente próximos (k-means simples com
+ * capacidade por grupo). Os grupos maiores vão para os dias com menos itens já alocados.
+ */
+export function distributeAcrossDays(stops: Stop[], dayCount: number, existingCounts: number[] = []): Stop[][] {
+  const result: Stop[][] = Array.from({ length: dayCount }, () => [])
+  if (stops.length === 0 || dayCount === 0) return result
+
+  const k = Math.min(dayCount, stops.length)
+  const capacity = Math.ceil(stops.length / k)
+
+  // Sementes: ponto mais afastado dos já escolhidos.
+  const seeds: Point[] = [stops[0]]
+  while (seeds.length < k) {
+    let far = stops[0]
+    let farDist = -1
+    for (const s of stops) {
+      const d = Math.min(...seeds.map((c) => Math.hypot(s.x - c.x, s.y - c.y)))
+      if (d > farDist) {
+        far = s
+        farDist = d
+      }
+    }
+    seeds.push(far)
+  }
+
+  let centers = seeds.map((c) => ({ x: c.x, y: c.y }))
+  let groups: Stop[][] = []
+  for (let iter = 0; iter < 6; iter++) {
+    const pairs = stops.flatMap((stop) =>
+      centers.map((c, ci) => ({ stop, ci, dist: Math.hypot(stop.x - c.x, stop.y - c.y) })),
+    )
+    pairs.sort((a, b) => a.dist - b.dist)
+    groups = Array.from({ length: k }, () => [])
+    const assigned = new Set<string>()
+    for (const { stop, ci } of pairs) {
+      if (assigned.has(stop.id) || groups[ci].length >= capacity) continue
+      groups[ci].push(stop)
+      assigned.add(stop.id)
+    }
+    centers = groups.map((g, i) =>
+      g.length
+        ? { x: g.reduce((a, s) => a + s.x, 0) / g.length, y: g.reduce((a, s) => a + s.y, 0) / g.length }
+        : centers[i],
+    )
+  }
+
+  const dayOrder = Array.from({ length: dayCount }, (_, i) => i).sort(
+    (a, b) => (existingCounts[a] ?? 0) - (existingCounts[b] ?? 0) || a - b,
+  )
+  ;[...groups].sort((a, b) => b.length - a.length).forEach((g, i) => (result[dayOrder[i]] = g))
+  return result
+}
+
+/** Linha do tempo de um dia (null se o dia ainda não tem itens alocados). */
+export function dayItinerary(day: Day, departureTime: string, returnTime: string): Itinerary | null {
+  if (day.stops.length === 0) return null
+  const byId = new Map(day.stops.map((s) => [s.id, s]))
+  const ordered = day.order.map((id) => byId.get(id)).filter((s): s is Stop => Boolean(s))
+  return scheduleInOrder(ordered, departureTime, returnTime)
 }

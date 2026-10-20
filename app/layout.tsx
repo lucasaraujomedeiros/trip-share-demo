@@ -6,7 +6,7 @@ import './globals.css'
 const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' })
 
 export const metadata: Metadata = {
-  title: 'Rota — Planejador de Roteiros Inteligente',
+  title: 'TripShare — Planejador de Roteiros Inteligente',
   description:
     'Monte seu dia de viagem: adicione atrações, defina horários e gere um roteiro inteligente organizado por turnos, com visualização no mapa.',
   generator: 'v0.app',
