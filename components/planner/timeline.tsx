@@ -49,9 +49,10 @@ type Props = {
   onReorder: (ids: string[]) => void
   hoveredId: string | null
   onHover: (id: string | null) => void
+  readOnly?: boolean
 }
 
-export function Timeline({ itinerary, onReorder, hoveredId, onHover }: Props) {
+export function Timeline({ itinerary, onReorder, hoveredId, onHover, readOnly }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -130,6 +131,7 @@ export function Timeline({ itinerary, onReorder, hoveredId, onHover }: Props) {
                       dark={style.dark}
                       highlighted={hoveredId === item.stop.id}
                       onHover={onHover}
+                      readOnly={readOnly}
                     />
                   ))}
                 </ol>

@@ -2,11 +2,12 @@ import { Columns2, List, Map as MapIcon, Route, ShoppingCart } from 'lucide-reac
 import { cn } from '@/lib/utils'
 
 export type ViewMode = 'planejamento' | 'dividido' | 'mapa'
-export type Page = 'explorar' | 'viagens' | 'perfil' | 'config'
+export type Page = 'explorar' | 'viagens' | 'social' | 'perfil' | 'config'
 
 const PAGES: { id: Page; label: string }[] = [
   { id: 'explorar', label: 'Explorar' },
   { id: 'viagens', label: 'Minhas Viagens' },
+  { id: 'social', label: 'Social' },
   { id: 'perfil', label: 'Perfil' },
   { id: 'config', label: 'Configurações' },
 ]
@@ -22,7 +23,7 @@ type Props = {
   onPageChange: (p: Page) => void
   view: ViewMode
   onViewChange: (v: ViewMode) => void
-  /** false enquanto a lista de viagens está aberta (nenhum modo em destaque). */
+  /** false quando nenhuma tela com modos de visualização está aberta (nenhum modo em destaque). */
   viewsActive: boolean
   cartCount: number
   onCartClick: () => void
@@ -35,7 +36,7 @@ export function AppHeader({ page, onPageChange, view, onViewChange, viewsActive,
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <Route className="size-5" aria-hidden="true" />
         </div>
-        <p className="text-lg font-bold leading-tight tracking-tight text-primary">rota</p>
+        <p className="text-lg font-bold leading-tight tracking-tight text-primary">TripShare</p>
       </div>
 
       <nav
@@ -85,7 +86,7 @@ export function AppHeader({ page, onPageChange, view, onViewChange, viewsActive,
           className="flex items-center gap-1 rounded-full border bg-background p-1 shadow-sm"
         >
           {VIEWS.map(({ id, label, icon: Icon }) => {
-            const active = page === 'viagens' && viewsActive && view === id
+            const active = viewsActive && view === id
             return (
               <button
                 key={id}

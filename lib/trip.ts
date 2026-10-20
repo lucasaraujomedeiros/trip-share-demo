@@ -167,6 +167,32 @@ export function createTrip(input: { name: string; destination: string; dayCount:
   }
 }
 
+/** Cópia profunda de uma viagem: novo id e novos ids de paradas, sem compartilhar nada com a original. */
+export function copyTrip(trip: Trip, options: { name: string; startDate: string | null }): Trip {
+  tripCounter += 1
+  const copyStop = (s: Stop): Stop => ({ ...s, id: createId(), constraint: { ...s.constraint } })
+  return {
+    id: `viagem-${Date.now().toString(36)}-${tripCounter}`,
+    name: options.name,
+    destination: trip.destination,
+    startDate: options.startDate,
+    globalUnallocated: trip.globalUnallocated.map(copyStop),
+    days: trip.days.map((d) => {
+      const idMap = new Map<string, string>()
+      const stops = d.stops.map((s) => {
+        const copy = copyStop(s)
+        idMap.set(s.id, copy.id)
+        return copy
+      })
+      return {
+        stops,
+        unallocated: d.unallocated.map(copyStop),
+        order: d.order.map((id) => idMap.get(id)).filter((id): id is string => Boolean(id)),
+      }
+    }),
+  }
+}
+
 const DAY_MS = 86_400_000
 
 function parseDate(iso: string) {

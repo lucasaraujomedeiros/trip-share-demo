@@ -22,7 +22,7 @@ export function TripSwitcher({ trips, currentId, onSelect, onNew }: Props) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label="Trocar viagem atual"
-        className="flex max-w-full items-center gap-2 rounded-full border bg-background py-1.5 pr-3 pl-4 text-left shadow-sm transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="flex w-full min-w-64 items-center justify-between gap-3 rounded-full border bg-background py-2 pr-4 pl-5 text-left shadow-sm sm:w-auto sm:min-w-72 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <span className="min-w-0">
           <span className="block text-[11px] leading-tight font-semibold tracking-wide text-muted-foreground uppercase">

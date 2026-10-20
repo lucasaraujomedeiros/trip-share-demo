@@ -22,11 +22,13 @@ type Props = {
   dark: boolean
   highlighted: boolean
   onHover: (id: string | null) => void
+  readOnly?: boolean
 }
 
-export function TimelineCard({ item, number, shift, dark, highlighted, onHover }: Props) {
+export function TimelineCard({ item, number, shift, dark, highlighted, onHover, readOnly }: Props) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: item.stop.id,
+    disabled: readOnly,
   })
   const { stop } = item
   const color = SHIFTS[shift].color
@@ -104,6 +106,7 @@ export function TimelineCard({ item, number, shift, dark, highlighted, onHover }
           )}
         </div>
 
+        {!readOnly && (
         <button
           type="button"
           ref={setActivatorNodeRef}
@@ -114,6 +117,7 @@ export function TimelineCard({ item, number, shift, dark, highlighted, onHover }
         >
           <GripVertical className="size-4" aria-hidden="true" />
         </button>
+        )}
       </article>
     </li>
   )

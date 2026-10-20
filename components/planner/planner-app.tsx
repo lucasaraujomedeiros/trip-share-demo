@@ -7,9 +7,13 @@ import { ItineraryPanel } from './itinerary-panel'
 import { MapPanel, type MapZoom } from './map-panel'
 import { ProfilePage } from './profile-page'
 import { SettingsPage } from './settings-page'
+import { SocialPage } from './social-page'
+import { TripViewer } from './trip-viewer'
 import { TripsList } from './trips-list'
 import { TripsPage, type CartScope } from './trips-page'
 import type { NewTripInput } from './new-trip-dialog'
+import type { NewPostInput } from './new-post-dialog'
+import { ME, MOCK_POSTS, cloneFromPost, snapshotForPost, type Post } from '@/lib/social'
 import { cartCount, createTrip, dayTitle, stopFromCatalog, type CATALOG, type Day, type Stop, type Trip } from '@/lib/trip'
 import { dayItinerary, distributeAcrossDays, optimizeOrder } from '@/lib/scheduler'
 import { cn } from '@/lib/utils'
@@ -21,6 +25,9 @@ export function PlannerApp() {
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [tripsScreen, setTripsScreen] = useState<'list' | 'detail'>('list')
   const [selectedDay, setSelectedDay] = useState(0)
+  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [viewerDay, setViewerDay] = useState(0)
   const [departure, setDeparture] = useState('08:00')
   const [returnTime, setReturnTime] = useState('02:30')
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -59,6 +66,7 @@ export function PlannerApp() {
 
   function openTrip(id: string) {
     selectTrip(id)
+    setPage('viagens')
     setView('planejamento')
     setTripsScreen('detail')
   }
@@ -74,7 +82,56 @@ export function PlannerApp() {
 
   function changePage(next: Page) {
     if (next === 'viagens') setTripsScreen('list')
+    if (next === 'social') setViewingId(null)
     setPage(next)
+  }
+
+  function updatePost(id: string, fn: (p: Post) => Post) {
+    setPosts((all) => all.map((p) => (p.id === id ? fn(p) : p)))
+  }
+
+  function toggleLike(id: string) {
+    updatePost(id, (p) => ({ ...p, likedByMe: !p.likedByMe, likes: p.likes + (p.likedByMe ? -1 : 1) }))
+  }
+
+  function addComment(id: string, text: string) {
+    updatePost(id, (p) => ({
+      ...p,
+      comments: [...p.comments, { id: `c-${id}-${p.comments.length + 1}-${Date.now()}`, author: ME.name, text, postedLabel: 'agora' }],
+    }))
+  }
+
+  function publishPost({ tripId, text, photos }: NewPostInput) {
+    const source = trips.find((t) => t.id === tripId)
+    if (!source) return
+    const post: Post = {
+      id: `post-${Date.now()}`,
+      author: ME.name,
+      avatarColor: ME.avatarColor,
+      postedLabel: 'agora mesmo',
+      text,
+      photos,
+      trip: snapshotForPost(source),
+      likes: 0,
+      likedByMe: false,
+      comments: [],
+    }
+    setPosts((all) => [post, ...all])
+  }
+
+  /** Clona a viagem de um post para Minhas Viagens e a torna a viagem atual. */
+  function clonePost(post: Post): Trip {
+    const copy = cloneFromPost(post)
+    setTrips((all) => [...all, copy])
+    setCurrentId(copy.id)
+    setSelectedDay(0)
+    return copy
+  }
+
+  function openPost(id: string) {
+    setViewingId(id)
+    setViewerDay(0)
+    setView('planejamento')
   }
 
   function isAdded(name: string) {
@@ -129,6 +186,15 @@ export function PlannerApp() {
   }
 
   function showView(next: ViewMode) {
+    // Vendo a viagem de um post: os botões apenas trocam o modo do visualizador.
+    if (page === 'social' && viewingPost) {
+      setView(next)
+      return
+    }
+    goToTrip(next)
+  }
+
+  function goToTrip(next: ViewMode) {
     // Sem viagem atual não há o que planejar: leva para Explorar para criar uma.
     if (!trip) {
       setPage('explorar')
@@ -139,6 +205,7 @@ export function PlannerApp() {
     setView(next)
   }
 
+  const viewingPost = viewingId ? (posts.find((p) => p.id === viewingId) ?? null) : null
   const showList = page === 'viagens' && (tripsScreen === 'list' || !trip)
   const showSplit = page === 'viagens' && !showList && view !== 'planejamento' && trip && day
 
@@ -149,9 +216,9 @@ export function PlannerApp() {
         onPageChange={changePage}
         view={view}
         onViewChange={showView}
-        viewsActive={!showList}
+        viewsActive={page === 'social' ? Boolean(viewingPost) : page === 'viagens' && !showList}
         cartCount={cartCount(trip)}
-        onCartClick={() => showView('planejamento')}
+        onCartClick={() => goToTrip('planejamento')}
       />
 
       {page === 'explorar' && (
@@ -244,6 +311,38 @@ export function PlannerApp() {
             </section>
           </main>
         </>
+      )}
+
+      {page === 'social' && !viewingPost && (
+        <SocialPage
+          posts={posts}
+          trips={trips}
+          currentId={currentId}
+          onToggleLike={toggleLike}
+          onAddComment={addComment}
+          onClone={clonePost}
+          onOpenPost={openPost}
+          onOpenTrip={openTrip}
+          onPublish={publishPost}
+        />
+      )}
+
+      {page === 'social' && viewingPost && (
+        <TripViewer
+          post={viewingPost}
+          view={view}
+          selectedDay={viewerDay}
+          onSelectDay={setViewerDay}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          hoveredId={hoveredId}
+          onHover={setHoveredId}
+          departure={departure}
+          returnTime={returnTime}
+          onBack={() => setViewingId(null)}
+          onClone={clonePost}
+          onOpenTrip={openTrip}
+        />
       )}
 
       {page === 'perfil' && <ProfilePage trips={trips} />}
