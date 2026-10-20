@@ -1,12 +1,11 @@
 import { CalendarDays, Heart, Plane, User } from 'lucide-react'
-import { cartCount, type Trip } from '@/lib/trip'
+import { tripItemCount, type Trip } from '@/lib/trip'
 
-export function ProfilePage({ trip }: { trip: Trip | null }) {
-  const planned = trip ? trip.days.reduce((sum, d) => sum + d.stops.length, 0) : 0
+export function ProfilePage({ trips }: { trips: Trip[] }) {
   const stats = [
-    { icon: Plane, label: 'Viagens', value: trip ? 1 : 0 },
-    { icon: CalendarDays, label: 'Dias planejados', value: trip ? trip.days.length : 0 },
-    { icon: Heart, label: 'Itens no roteiro', value: planned + cartCount(trip) },
+    { icon: Plane, label: 'Viagens', value: trips.length },
+    { icon: CalendarDays, label: 'Dias planejados', value: trips.reduce((sum, t) => sum + t.days.length, 0) },
+    { icon: Heart, label: 'Itens salvos', value: trips.reduce((sum, t) => sum + tripItemCount(t), 0) },
   ]
 
   return (

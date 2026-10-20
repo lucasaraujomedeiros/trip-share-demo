@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import type { Itinerary } from '@/lib/scheduler'
 
 type Props = {
-  dayNumber: number
+  dayTitle: string
   itinerary: Itinerary | null
   onReorder: (ids: string[]) => void
   hoveredId: string | null
@@ -12,11 +12,11 @@ type Props = {
 }
 
 /** Linha do tempo arrastável de um único dia (usada em Dividido). */
-export function ItineraryPanel({ dayNumber, itinerary, onReorder, hoveredId, onHover, onGoPlanning }: Props) {
+export function ItineraryPanel({ dayTitle, itinerary, onReorder, hoveredId, onHover, onGoPlanning }: Props) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 md:px-6">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold tracking-tight">Roteiro do Dia {dayNumber}</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Roteiro do {dayTitle}</h2>
         <p className="text-sm text-muted-foreground">Arraste os cards para reorganizar a ordem.</p>
       </div>
       {itinerary ? (

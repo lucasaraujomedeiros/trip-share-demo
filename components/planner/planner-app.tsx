@@ -7,27 +7,37 @@ import { ItineraryPanel } from './itinerary-panel'
 import { MapPanel, type MapZoom } from './map-panel'
 import { ProfilePage } from './profile-page'
 import { SettingsPage } from './settings-page'
+import { TripsList } from './trips-list'
 import { TripsPage, type CartScope } from './trips-page'
-import { cartCount, createTrip, stopFromCatalog, type CATALOG, type Day, type Stop, type Trip } from '@/lib/trip'
+import type { NewTripInput } from './new-trip-dialog'
+import { cartCount, createTrip, dayTitle, stopFromCatalog, type CATALOG, type Day, type Stop, type Trip } from '@/lib/trip'
 import { dayItinerary, distributeAcrossDays, optimizeOrder } from '@/lib/scheduler'
 import { cn } from '@/lib/utils'
 
 export function PlannerApp() {
   const [page, setPage] = useState<Page>('explorar')
   const [view, setView] = useState<ViewMode>('planejamento')
-  const [trip, setTrip] = useState<Trip | null>(null)
+  const [trips, setTrips] = useState<Trip[]>([])
+  const [currentId, setCurrentId] = useState<string | null>(null)
+  const [tripsScreen, setTripsScreen] = useState<'list' | 'detail'>('list')
   const [selectedDay, setSelectedDay] = useState(0)
   const [departure, setDeparture] = useState('08:00')
   const [returnTime, setReturnTime] = useState('02:30')
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [zoom, setZoom] = useState<MapZoom>('in')
 
+  const trip = trips.find((t) => t.id === currentId) ?? null
   const day = trip?.days[selectedDay]
   const itinerary = useMemo(() => (day ? dayItinerary(day, departure, returnTime) : null), [day, departure, returnTime])
   const mapStops = useMemo(() => (day ? [...day.stops, ...day.unallocated] : []), [day])
 
+  /** Atualiza apenas a viagem atual. */
+  function updateTrip(fn: (t: Trip) => Trip) {
+    setTrips((all) => all.map((t) => (t.id === currentId ? fn(t) : t)))
+  }
+
   function updateDay(index: number, fn: (d: Day) => Day) {
-    setTrip((t) => t && { ...t, days: t.days.map((d, i) => (i === index ? fn(d) : d)) })
+    updateTrip((t) => ({ ...t, days: t.days.map((d, i) => (i === index ? fn(d) : d)) }))
   }
 
   function allocate(d: Day, extra: Stop[] = []): Day {
@@ -35,9 +45,36 @@ export function PlannerApp() {
     return { stops, unallocated: [], order: optimizeOrder(stops, departure).map((s) => s.id) }
   }
 
-  function createNewTrip(destination: string, days: number) {
-    setTrip(createTrip(destination, days))
+  function createNewTrip(input: NewTripInput) {
+    const created = createTrip(input)
+    setTrips((all) => [...all, created])
+    setCurrentId(created.id)
     setSelectedDay(0)
+  }
+
+  function selectTrip(id: string) {
+    setCurrentId(id)
+    setSelectedDay(0)
+  }
+
+  function openTrip(id: string) {
+    selectTrip(id)
+    setView('planejamento')
+    setTripsScreen('detail')
+  }
+
+  function deleteTrip(id: string) {
+    const remaining = trips.filter((t) => t.id !== id)
+    setTrips(remaining)
+    if (id === currentId) {
+      setCurrentId(remaining[0]?.id ?? null)
+      setSelectedDay(0)
+    }
+  }
+
+  function changePage(next: Page) {
+    if (next === 'viagens') setTripsScreen('list')
+    setPage(next)
   }
 
   function isAdded(name: string) {
@@ -49,7 +86,7 @@ export function PlannerApp() {
   function addFromExplore(entry: (typeof CATALOG)[number], dayIndex: number | null, time: string | null) {
     const stop = stopFromCatalog(entry, time ? { type: 'inicio', start: time } : { type: 'livre' })
     if (dayIndex === null) {
-      setTrip((t) => t && { ...t, globalUnallocated: [...t.globalUnallocated, stop] })
+      updateTrip((t) => ({ ...t, globalUnallocated: [...t.globalUnallocated, stop] }))
     } else if (time) {
       // Com dia e horário, o item já entra na linha do tempo do dia.
       updateDay(dayIndex, (d) => ({
@@ -64,20 +101,20 @@ export function PlannerApp() {
 
   function updateStop(scope: CartScope, stop: Stop) {
     const swap = (list: Stop[]) => list.map((s) => (s.id === stop.id ? stop : s))
-    if (scope === 'global') setTrip((t) => t && { ...t, globalUnallocated: swap(t.globalUnallocated) })
+    if (scope === 'global') updateTrip((t) => ({ ...t, globalUnallocated: swap(t.globalUnallocated) }))
     else updateDay(scope, (d) => ({ ...d, unallocated: swap(d.unallocated) }))
   }
 
   function removeStop(scope: CartScope, id: string) {
     const drop = (list: Stop[]) => list.filter((s) => s.id !== id)
-    if (scope === 'global') setTrip((t) => t && { ...t, globalUnallocated: drop(t.globalUnallocated) })
+    if (scope === 'global') updateTrip((t) => ({ ...t, globalUnallocated: drop(t.globalUnallocated) }))
     else updateDay(scope, (d) => ({ ...d, unallocated: drop(d.unallocated) }))
   }
 
   /** Distribui o carrinho global entre os dias e gera o roteiro de cada dia com itens. */
   function distributeTrip() {
-    setTrip((t) => {
-      if (!t || t.globalUnallocated.length === 0) return t
+    updateTrip((t) => {
+      if (t.globalUnallocated.length === 0) return t
       const groups = distributeAcrossDays(
         t.globalUnallocated,
         t.days.length,
@@ -92,28 +129,53 @@ export function PlannerApp() {
   }
 
   function showView(next: ViewMode) {
+    // Sem viagem atual não há o que planejar: leva para Explorar para criar uma.
+    if (!trip) {
+      setPage('explorar')
+      return
+    }
     setPage('viagens')
+    setTripsScreen('detail')
     setView(next)
   }
 
-  const showSplit = page === 'viagens' && view !== 'planejamento' && trip && day
+  const showList = page === 'viagens' && (tripsScreen === 'list' || !trip)
+  const showSplit = page === 'viagens' && !showList && view !== 'planejamento' && trip && day
 
   return (
     <div className="flex h-dvh flex-col bg-background">
       <AppHeader
         page={page}
-        onPageChange={setPage}
+        onPageChange={changePage}
         view={view}
         onViewChange={showView}
+        viewsActive={!showList}
         cartCount={cartCount(trip)}
         onCartClick={() => showView('planejamento')}
       />
 
       {page === 'explorar' && (
-        <ExplorePage trip={trip} isAdded={isAdded} onCreateTrip={createNewTrip} onAdd={addFromExplore} />
+        <ExplorePage
+          trips={trips}
+          trip={trip}
+          onSelectTrip={selectTrip}
+          isAdded={isAdded}
+          onCreateTrip={createNewTrip}
+          onAdd={addFromExplore}
+        />
       )}
 
-      {page === 'viagens' && !showSplit && (
+      {showList && (
+        <TripsList
+          trips={trips}
+          currentId={currentId}
+          onOpen={openTrip}
+          onDelete={deleteTrip}
+          onCreateTrip={createNewTrip}
+        />
+      )}
+
+      {page === 'viagens' && !showList && !showSplit && (
         <TripsPage
           trip={trip}
           selectedDay={selectedDay}
@@ -128,6 +190,7 @@ export function PlannerApp() {
           onUpdateStop={updateStop}
           onRemoveStop={removeStop}
           onGoExplore={() => setPage('explorar')}
+          onBack={() => setTripsScreen('list')}
         />
       )}
 
@@ -145,7 +208,7 @@ export function PlannerApp() {
                   i === selectedDay ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
               >
-                Dia {i + 1}
+                {dayTitle(trip, i)}
               </button>
             ))}
           </nav>
@@ -156,7 +219,7 @@ export function PlannerApp() {
                 className="flex min-h-0 flex-1 flex-col border-t bg-background md:w-[460px] md:flex-none md:border-t-0 md:border-r lg:w-[520px]"
               >
                 <ItineraryPanel
-                  dayNumber={selectedDay + 1}
+                  dayTitle={dayTitle(trip, selectedDay)}
                   itinerary={itinerary}
                   onReorder={(ids) => updateDay(selectedDay, (d) => ({ ...d, order: ids }))}
                   hoveredId={hoveredId}
@@ -183,7 +246,7 @@ export function PlannerApp() {
         </>
       )}
 
-      {page === 'perfil' && <ProfilePage trip={trip} />}
+      {page === 'perfil' && <ProfilePage trips={trips} />}
       {page === 'config' && (
         <SettingsPage
           departure={departure}

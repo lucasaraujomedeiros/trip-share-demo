@@ -22,11 +22,13 @@ type Props = {
   onPageChange: (p: Page) => void
   view: ViewMode
   onViewChange: (v: ViewMode) => void
+  /** false enquanto a lista de viagens está aberta (nenhum modo em destaque). */
+  viewsActive: boolean
   cartCount: number
   onCartClick: () => void
 }
 
-export function AppHeader({ page, onPageChange, view, onViewChange, cartCount, onCartClick }: Props) {
+export function AppHeader({ page, onPageChange, view, onViewChange, viewsActive, cartCount, onCartClick }: Props) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3 md:grid md:grid-cols-[1fr_auto_1fr] md:px-6">
       <div className="flex min-w-0 items-center gap-3">
@@ -83,7 +85,7 @@ export function AppHeader({ page, onPageChange, view, onViewChange, cartCount, o
           className="flex items-center gap-1 rounded-full border bg-background p-1 shadow-sm"
         >
           {VIEWS.map(({ id, label, icon: Icon }) => {
-            const active = page === 'viagens' && view === id
+            const active = page === 'viagens' && viewsActive && view === id
             return (
               <button
                 key={id}

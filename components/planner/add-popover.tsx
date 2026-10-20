@@ -8,13 +8,13 @@ import { Select } from '@/components/ui/select'
 
 type Props = {
   name: string
-  dayCount: number
+  dayLabels: string[]
   added: boolean
   /** day: índice do dia ou null para "qualquer dia"; time: "HH:MM" ou null. */
   onAdd: (day: number | null, time: string | null) => void
 }
 
-export function AddPopover({ name, dayCount, added, onAdd }: Props) {
+export function AddPopover({ name, dayLabels, added, onAdd }: Props) {
   const [open, setOpen] = useState(false)
   const [day, setDay] = useState('any')
   const [time, setTime] = useState('')
@@ -55,9 +55,9 @@ export function AddPopover({ name, dayCount, added, onAdd }: Props) {
         </label>
         <Select id={`${id}-dia`} value={day} onChange={(e) => setDay(e.target.value)}>
           <option value="any">Qualquer dia</option>
-          {Array.from({ length: dayCount }, (_, i) => (
+          {dayLabels.map((label, i) => (
             <option key={i} value={i}>
-              Dia {i + 1}
+              {label}
             </option>
           ))}
         </Select>

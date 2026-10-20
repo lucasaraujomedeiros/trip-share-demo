@@ -27,7 +27,12 @@ export type Day = {
 }
 
 export type Trip = {
+  id: string
+  /** Nome dado pelo usuário, ex.: "Viagem com os amigos". */
+  name: string
   destination: string
+  /** Data do primeiro dia (AAAA-MM-DD); null quando a viagem foi criada só com número de dias. */
+  startDate: string | null
   /** Carrinho global: itens sem dia preferido. */
   globalUnallocated: Stop[]
   days: Day[]
@@ -148,12 +153,56 @@ export function describeConstraint(c: Constraint) {
   return null
 }
 
-export function createTrip(destination: string, dayCount: number): Trip {
+let tripCounter = 0
+
+export function createTrip(input: { name: string; destination: string; dayCount: number; startDate: string | null }): Trip {
+  tripCounter += 1
   return {
-    destination,
+    id: `viagem-${Date.now().toString(36)}-${tripCounter}`,
+    name: input.name,
+    destination: input.destination,
+    startDate: input.startDate,
     globalUnallocated: [],
-    days: Array.from({ length: dayCount }, () => ({ unallocated: [], stops: [], order: [] })),
+    days: Array.from({ length: input.dayCount }, () => ({ unallocated: [], stops: [], order: [] })),
   }
+}
+
+const DAY_MS = 86_400_000
+
+function parseDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+
+/** Número de dias entre duas datas, contando os dois extremos (11 a 13 = 3 dias). Retorna 0 se inválido. */
+export function inclusiveDays(startIso: string, endIso: string) {
+  if (!startIso || !endIso) return 0
+  const diff = Math.round((parseDate(endIso) - parseDate(startIso)) / DAY_MS)
+  return diff < 0 ? 0 : diff + 1
+}
+
+function shortDate(ms: number) {
+  const d = new Date(ms)
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+/** "Dia 1 · 11/11" quando a viagem tem datas, ou apenas "Dia 1". */
+export function dayTitle(trip: Pick<Trip, 'startDate'>, index: number) {
+  if (!trip.startDate) return `Dia ${index + 1}`
+  return `Dia ${index + 1} · ${shortDate(parseDate(trip.startDate) + index * DAY_MS)}`
+}
+
+/** "11/11/2026 – 13/11/2026" ou "4 dias". */
+export function tripPeriod(trip: Trip) {
+  const n = trip.days.length
+  if (!trip.startDate) return `${n} ${n === 1 ? 'dia' : 'dias'}`
+  const start = parseDate(trip.startDate)
+  const full = (ms: number) => `${shortDate(ms)}/${new Date(ms).getUTCFullYear()}`
+  return n === 1 ? full(start) : `${full(start)} – ${full(start + (n - 1) * DAY_MS)}`
+}
+
+export function tripItemCount(trip: Trip) {
+  return cartCount(trip) + trip.days.reduce((sum, d) => sum + d.stops.length, 0)
 }
 
 export function cartCount(trip: Trip | null) {

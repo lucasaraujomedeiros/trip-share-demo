@@ -1,12 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Shuffle, Sparkles } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Shuffle, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CartCard } from './cart-card'
 import { Timeline } from './timeline'
 import { dayItinerary } from '@/lib/scheduler'
-import { formatDuration, type Stop, type Trip } from '@/lib/trip'
+import { dayTitle, formatDuration, type Stop, type Trip } from '@/lib/trip'
 import { cn } from '@/lib/utils'
 
 export type CartScope = 'global' | number
@@ -25,6 +25,7 @@ type Props = {
   onUpdateStop: (scope: CartScope, stop: Stop) => void
   onRemoveStop: (scope: CartScope, id: string) => void
   onGoExplore: () => void
+  onBack: () => void
 }
 
 export function TripsPage(props: Props) {
@@ -55,7 +56,17 @@ export function TripsPage(props: Props) {
   const dayCount = trip.days.length
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-muted/40 p-4 md:p-6 lg:flex-row lg:overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col bg-muted/40">
+      <div className="flex items-center gap-3 px-4 pt-3 md:px-6">
+        <Button variant="outline" className="h-8 rounded-full px-3" onClick={props.onBack}>
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Voltar
+        </Button>
+        <p className="min-w-0 truncate text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{trip.name}</span> · {trip.destination}
+        </p>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pt-3 md:p-6 md:pt-3 lg:flex-row lg:overflow-hidden">
       <aside
         aria-label="Não alocados da viagem"
         className="flex shrink-0 flex-col rounded-3xl border bg-background lg:min-h-0 lg:w-[380px]"
@@ -89,7 +100,7 @@ export function TripsPage(props: Props) {
       </aside>
 
       <section
-        aria-label={`Dia ${selectedDay + 1}`}
+        aria-label={dayTitle(trip, selectedDay)}
         className="flex shrink-0 flex-col rounded-3xl border bg-background lg:min-h-0 lg:flex-1"
       >
         <header className="flex items-center justify-between gap-3 border-b px-4 py-3">
@@ -103,9 +114,9 @@ export function TripsPage(props: Props) {
             <ChevronLeft className="size-5" aria-hidden="true" />
           </button>
           <div className="text-center">
-            <h2 className="text-lg font-semibold tracking-tight">Dia {selectedDay + 1}</h2>
+            <h2 className="text-lg font-semibold tracking-tight">{dayTitle(trip, selectedDay)}</h2>
             <p className="text-xs text-muted-foreground">
-              {trip.destination} · dia {selectedDay + 1} de {dayCount}
+              {trip.name} · dia {selectedDay + 1} de {dayCount}
             </p>
           </div>
           <button
@@ -168,6 +179,7 @@ export function TripsPage(props: Props) {
           </div>
         </div>
       </section>
+      </div>
     </div>
   )
 }

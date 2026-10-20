@@ -5,15 +5,18 @@ import { Clock, Compass, MapPin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AddPopover } from './add-popover'
 import { CategoryIcon } from './category-icon'
-import { NewTripDialog } from './new-trip-dialog'
-import { CATALOG, CATEGORY_LABEL, type Category, type Trip } from '@/lib/trip'
+import { NewTripDialog, type NewTripInput } from './new-trip-dialog'
+import { TripSwitcher } from './trip-switcher'
+import { CATALOG, CATEGORY_LABEL, dayTitle, tripPeriod, type Category, type Trip } from '@/lib/trip'
 
 type Entry = (typeof CATALOG)[number]
 
 type Props = {
+  trips: Trip[]
   trip: Trip | null
+  onSelectTrip: (id: string) => void
   isAdded: (name: string) => boolean
-  onCreateTrip: (destination: string, days: number) => void
+  onCreateTrip: (input: NewTripInput) => void
   onAdd: (entry: Entry, day: number | null, time: string | null) => void
 }
 
@@ -25,25 +28,28 @@ const BANNER: Record<Category, string> = {
 
 const BANNER_HEIGHT = ['h-40', 'h-52', 'h-44', 'h-56', 'h-48']
 
-export function ExplorePage({ trip, isAdded, onCreateTrip, onAdd }: Props) {
+export function ExplorePage({ trips, trip, onSelectTrip, isAdded, onCreateTrip, onAdd }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {trip && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-2.5 md:px-6">
+          <TripSwitcher trips={trips} currentId={trip.id} onSelect={onSelectTrip} onNew={() => setDialogOpen(true)} />
+          <Button variant="outline" className="h-9 rounded-full px-4" onClick={() => setDialogOpen(true)}>
+            <Plus className="size-4" aria-hidden="true" />
+            Nova viagem
+          </Button>
+        </div>
+      )}
+      <div className="min-h-0 flex-1 overflow-y-auto">
       {trip ? (
         <div className="mx-auto max-w-6xl px-4 py-6 md:px-6">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Explorar {trip.destination}</h1>
-              <p className="text-sm text-muted-foreground">
-                {trip.days.length} {trip.days.length === 1 ? 'dia' : 'dias'} de viagem · toque em + para adicionar ao
-                roteiro
-              </p>
-            </div>
-            <Button variant="outline" className="h-9 rounded-full px-4" onClick={() => setDialogOpen(true)}>
-              <Plus className="size-4" aria-hidden="true" />
-              Nova viagem
-            </Button>
+          <div className="mb-5">
+            <h1 className="text-2xl font-semibold tracking-tight">Explorar {trip.destination}</h1>
+            <p className="text-sm text-muted-foreground">
+              {trip.name} · {tripPeriod(trip)} · toque em + para adicionar ao roteiro
+            </p>
           </div>
 
           <ul className="columns-1 gap-4 sm:columns-2 lg:columns-3">
@@ -71,7 +77,7 @@ export function ExplorePage({ trip, isAdded, onCreateTrip, onAdd }: Props) {
                     </div>
                     <AddPopover
                       name={entry.name}
-                      dayCount={trip.days.length}
+                      dayLabels={trip.days.map((_, i) => dayTitle(trip, i))}
                       added={isAdded(entry.name)}
                       onAdd={(day, time) => onAdd(entry, day, time)}
                     />
@@ -99,12 +105,9 @@ export function ExplorePage({ trip, isAdded, onCreateTrip, onAdd }: Props) {
         </section>
       )}
 
-      <NewTripDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        replacing={Boolean(trip)}
-        onCreate={onCreateTrip}
-      />
+      </div>
+
+      <NewTripDialog open={dialogOpen} onOpenChange={setDialogOpen} onCreate={onCreateTrip} />
     </div>
   )
 }
