@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
 import { CloneNotice } from './clone-notice'
 import { NewPostDialog, type NewPostInput } from './new-post-dialog'
 import { PostCard } from './post-card'
@@ -35,6 +36,26 @@ export function SocialPage({
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [notice, setNotice] = useState<{ id: string; name: string } | null>(null)
+  const [place, setPlace] = useState('')
+  const places = useMemo(() => {
+    const names = new Set<string>()
+    for (const post of posts) {
+      for (const day of post.trip.days) for (const s of [...day.stops, ...day.unallocated]) names.add(s.name)
+      for (const s of post.trip.globalUnallocated) names.add(s.name)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [posts])
+  const visiblePosts = useMemo(
+    () =>
+      place
+        ? posts.filter((p) =>
+            [...p.trip.globalUnallocated, ...p.trip.days.flatMap((d) => [...d.stops, ...d.unallocated])].some(
+              (s) => s.name === place,
+            ),
+          )
+        : posts,
+    [posts, place],
+  )
   const eligible = useMemo(() => trips.filter((t) => tripItemCount(t) > 0), [trips])
 
   function clone(post: Post) {
@@ -62,8 +83,25 @@ export function SocialPage({
           </div>
         )}
 
+        <div className="mb-4 max-w-sm">
+          <Select aria-label="Filtrar por lugar" value={place} onChange={(e) => setPlace(e.target.value)}>
+            <option value="">Todos os lugares</option>
+            {places.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        {visiblePosts.length === 0 && (
+          <p className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+            Nenhuma postagem inclui este lugar.
+          </p>
+        )}
+
         <ul className="flex flex-col gap-4">
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <li key={post.id}>
               <PostCard
                 post={post}

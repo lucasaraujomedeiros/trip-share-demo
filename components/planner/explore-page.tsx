@@ -52,9 +52,9 @@ export function ExplorePage({ trips, trip, onSelectTrip, isAdded, onCreateTrip, 
             </p>
           </div>
 
-          <ul className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+          <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {CATALOG.map((entry, i) => (
-              <li key={entry.name} className="mb-4 break-inside-avoid">
+              <li key={entry.name}>
                 <article className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_6px_20px_rgba(0,0,0,0.1)]">
                   <div
                     className={`flex items-center justify-center bg-gradient-to-br ${BANNER[entry.category]} ${BANNER_HEIGHT[i % BANNER_HEIGHT.length]}`}
