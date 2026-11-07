@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppHeader, type Page, type ViewMode } from './app-header'
 import { ExplorePage } from './explore-page'
 import { ItineraryPanel } from './itinerary-panel'
 import { MapPanel, type MapZoom } from './map-panel'
 import { ProfilePage } from './profile-page'
-import { SettingsPage } from './settings-page'
+import { SettingsPage, type ThemeId } from './settings-page'
 import { SocialPage } from './social-page'
 import { TripViewer } from './trip-viewer'
 import { TripsList } from './trips-list'
@@ -32,6 +32,17 @@ export function PlannerApp() {
   const [returnTime, setReturnTime] = useState('02:30')
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [zoom, setZoom] = useState<MapZoom>('in')
+  const [theme, setTheme] = useState<ThemeId>('ocean')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('tripshare-theme') as ThemeId | null
+    if (saved) setTheme(saved)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('tripshare-theme', theme)
+  }, [theme])
 
   const trip = trips.find((t) => t.id === currentId) ?? null
   const day = trip?.days[selectedDay]
@@ -168,6 +179,19 @@ export function PlannerApp() {
     else updateDay(scope, (d) => ({ ...d, unallocated: drop(d.unallocated) }))
   }
 
+  /** Move um item do carrinho global para os não alocados do dia escolhido. */
+  function allocateStop(id: string, dayIndex: number) {
+    updateTrip((t) => {
+      const stop = t.globalUnallocated.find((s) => s.id === id)
+      if (!stop) return t
+      return {
+        ...t,
+        globalUnallocated: t.globalUnallocated.filter((s) => s.id !== id),
+        days: t.days.map((d, i) => (i === dayIndex ? { ...d, unallocated: [...d.unallocated, stop] } : d)),
+      }
+    })
+  }
+
   /** Distribui o carrinho global entre os dias e gera o roteiro de cada dia com itens. */
   function distributeTrip() {
     updateTrip((t) => {
@@ -256,6 +280,7 @@ export function PlannerApp() {
           onReorder={(i, ids) => updateDay(i, (d) => ({ ...d, order: ids }))}
           onUpdateStop={updateStop}
           onRemoveStop={removeStop}
+          onAllocateStop={allocateStop}
           onGoExplore={() => setPage('explorar')}
           onBack={() => setTripsScreen('list')}
         />
@@ -352,6 +377,8 @@ export function PlannerApp() {
           onDepartureChange={setDeparture}
           returnTime={returnTime}
           onReturnTimeChange={setReturnTime}
+          theme={theme}
+          onThemeChange={setTheme}
         />
       )}
     </div>

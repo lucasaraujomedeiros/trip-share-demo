@@ -24,6 +24,7 @@ type Props = {
   onReorder: (day: number, ids: string[]) => void
   onUpdateStop: (scope: CartScope, stop: Stop) => void
   onRemoveStop: (scope: CartScope, id: string) => void
+  onAllocateStop: (id: string, day: number) => void
   onGoExplore: () => void
   onBack: () => void
 }
@@ -69,7 +70,7 @@ export function TripsPage(props: Props) {
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pt-3 md:p-6 md:pt-3 lg:flex-row lg:overflow-hidden">
       <aside
         aria-label="Não alocados da viagem"
-        className="flex shrink-0 flex-col rounded-3xl border bg-background lg:min-h-0 lg:w-[380px]"
+        className="flex shrink-0 flex-col rounded-3xl border bg-background lg:min-h-0 lg:w-[420px] xl:w-[460px]"
       >
         <div className="border-b p-4">
           <h2 className="text-lg font-semibold tracking-tight">Não Alocados da Viagem</h2>
@@ -80,13 +81,13 @@ export function TripsPage(props: Props) {
           <Button
             onClick={props.onDistribute}
             disabled={trip.globalUnallocated.length === 0}
-            className="mt-3 h-11 w-full rounded-xl bg-gradient-to-r from-[#E61E4D] to-[#D70466] font-semibold text-white hover:opacity-95"
+            className="mt-3 h-11 w-full rounded-xl bg-gradient-to-r from-brand-from to-brand-to font-semibold text-white hover:opacity-95"
           >
             <Shuffle className="size-4" aria-hidden="true" />
             Distribuir Toda a Viagem
           </Button>
         </div>
-        <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+        <div className="min-w-0 p-4 lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto">
           <CartList
             stops={trip.globalUnallocated}
             scope="global"
@@ -95,6 +96,8 @@ export function TripsPage(props: Props) {
             onHover={onHover}
             onUpdateStop={props.onUpdateStop}
             onRemoveStop={props.onRemoveStop}
+            dayLabels={trip.days.map((_, i) => dayTitle(trip, i))}
+            onAllocate={props.onAllocateStop}
           />
         </div>
       </aside>
@@ -142,7 +145,7 @@ export function TripsPage(props: Props) {
               <Button
                 onClick={() => props.onGenerateDay(selectedDay)}
                 disabled={day.unallocated.length + day.stops.length === 0}
-                className="h-10 rounded-xl bg-gradient-to-r from-[#E61E4D] to-[#D70466] px-4 font-semibold text-white hover:opacity-95"
+                className="h-10 rounded-xl bg-gradient-to-r from-brand-from to-brand-to px-4 font-semibold text-white hover:opacity-95"
               >
                 <Sparkles className="size-4" aria-hidden="true" />
                 Gerar Roteiro do Dia
@@ -193,6 +196,8 @@ function CartList({
   onUpdateStop,
   onRemoveStop,
   columns,
+  dayLabels,
+  onAllocate,
 }: {
   stops: Stop[]
   scope: CartScope
@@ -202,6 +207,8 @@ function CartList({
   onUpdateStop: (scope: CartScope, stop: Stop) => void
   onRemoveStop: (scope: CartScope, id: string) => void
   columns?: boolean
+  dayLabels?: string[]
+  onAllocate?: (id: string, day: number) => void
 }) {
   if (stops.length === 0) {
     return <p className="rounded-2xl border border-dashed p-4 text-center text-sm text-muted-foreground">{empty}</p>
@@ -209,13 +216,15 @@ function CartList({
   return (
     <ul className={cn('grid gap-3', columns && 'xl:grid-cols-2')}>
       {stops.map((stop) => (
-        <li key={stop.id}>
+        <li key={stop.id} className="min-w-0">
           <CartCard
             stop={stop}
             highlighted={hoveredId === stop.id}
             onHover={onHover}
             onChange={(next) => onUpdateStop(scope, next)}
             onRemove={() => onRemoveStop(scope, stop.id)}
+            dayLabels={dayLabels}
+            onAllocate={onAllocate && ((day) => onAllocate(stop.id, day))}
           />
         </li>
       ))}

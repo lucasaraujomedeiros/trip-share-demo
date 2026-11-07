@@ -2,6 +2,7 @@
 
 import { Clock, Lock, Minus, Plus, X } from 'lucide-react'
 import { CategoryIcon } from './category-icon'
+import { Select } from '@/components/ui/select'
 import { CATEGORY_LABEL, formatDuration, type Constraint, type Stop } from '@/lib/trip'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +12,9 @@ type Props = {
   onHover: (id: string | null) => void
   onChange: (stop: Stop) => void
   onRemove: () => void
+  /** Rótulos dos dias; quando informado com onAllocate, exibe o seletor de alocação manual. */
+  dayLabels?: string[]
+  onAllocate?: (day: number) => void
 }
 
 const CONSTRAINT_OPTIONS: { type: Constraint['type']; label: string }[] = [
@@ -19,7 +23,7 @@ const CONSTRAINT_OPTIONS: { type: Constraint['type']; label: string }[] = [
   { type: 'janela', label: 'Janela' },
 ]
 
-export function CartCard({ stop, highlighted, onHover, onChange, onRemove }: Props) {
+export function CartCard({ stop, highlighted, onHover, onChange, onRemove, dayLabels, onAllocate }: Props) {
   const c = stop.constraint
 
   function setDuration(delta: number) {
@@ -95,9 +99,27 @@ export function CartCard({ stop, highlighted, onHover, onChange, onRemove }: Pro
         </div>
       </div>
 
+      {dayLabels && onAllocate && (
+        <div className="mt-3 border-t pt-3">
+          <Select
+            aria-label={`Alocar ${stop.name} em um dia`}
+            value=""
+            onChange={(e) => e.target.value !== '' && onAllocate(Number(e.target.value))}
+            className="h-9"
+          >
+            <option value="">Alocar em um dia…</option>
+            {dayLabels.map((label, i) => (
+              <option key={i} value={i}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+
       <fieldset className="mt-3 border-t pt-3">
         <legend className="sr-only">Restrição de horário</legend>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Lock className="size-4" aria-hidden="true" />
             Horário
